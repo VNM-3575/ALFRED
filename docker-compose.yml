@@ -1,0 +1,57 @@
+services:
+  # The Brain: Where MOR's data and ALFRED's memory live
+  db:
+    image: postgres:15-alpine
+    container_name: alfred_db
+    environment:
+      POSTGRES_USER: alfred_admin
+      POSTGRES_PASSWORD: alfred_password
+      POSTGRES_DB: alfred_warehouse
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Database UI: To visualize what SHUGA&SPICE and MOR are doing
+  adminer:
+    image: adminer
+    container_name: alfred_ui_db
+    restart: always
+    ports:
+      - "8080:8080"
+
+  # The Agents: This is where your LangGraph code lives
+  alfred_agents:
+    build: .
+    container_name: alfred_core
+    volumes:
+      - .:/app
+    environment:
+      - DATABASE_URL=postgresql://alfred_admin:alfred_password@db:5432/alfred_warehouse
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - OPENCLAW_API_URL=${OPENCLAW_API_URL}
+      - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY}
+      - CAPTCHA_API_KEY=${CAPTCHA_API_KEY}
+    ports:
+      - "8000:8000" # Expose the FastAPI port
+    depends_on:
+      - db
+    command: uvicorn api:app --host 0.0.0.0 --port 8000 --reload
+
+  # Ngrok tunnel to expose ALFRED API to the internet (for Hugging Face Spaces / remote access)
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: alfred_ngrok
+    restart: unless-stopped
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+    command: "http alfred_agents:8000"
+    ports:
+      - "4040:4040" # Dashboard accessible locally at localhost:4040
+    depends_on:
+      - alfred_agents
+
+volumes:
+  postgres_data:

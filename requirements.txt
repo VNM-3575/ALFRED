@@ -1,0 +1,29 @@
+# Core
+langgraph
+langchain-groq
+langchain-google-genai
+langchain-core
+streamlit
+python-dotenv
+playwright
+playwright-stealth
+apscheduler
+huggingface_hub
+
+# Data & Finance
+yfinance
+pandas-ta
+duckdb
+psycopg2-binary
+
+# Security
+python-nmap
+scapy
+
+# Creative
+tweepy
+openai
+Pillow
+fpdf2
+pypdf
+matplotlib
