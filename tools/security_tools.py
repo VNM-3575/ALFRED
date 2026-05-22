@@ -67,6 +67,19 @@ def download_portal_assignment(assignment_id: str, username: str = None, passwor
                     error_msg += "\n[A screenshot of the browser failure has been saved to data/portal_error_screenshot.png]"
             except Exception:
                 pass
+
+        # LOCAL FALLBACK: If OpenClaw is offline, try a direct HTTP download
+        try:
+            target_url = f"https://studentportal.example.edu/assignments/{assignment_id}"
+            fallback_res = requests.get(target_url, auth=(
+                username, password) if username and password else None, timeout=15)
+            fallback_res.raise_for_status()
+            with open(output_path, "wb") as f:
+                f.write(fallback_res.content)
+            error_msg += f"\n\n[OpenClaw Offline - Used Local Fallback]: Successfully downloaded directly to {output_path}."
+        except Exception as fallback_e:
+            error_msg += f"\n[Local Fallback also failed]: {str(fallback_e)}"
+
         return error_msg
 
 
@@ -96,6 +109,14 @@ def run_nmap_audit(target_ip: str, scan_type: str = "-sV") -> str:
         return f"Nmap Audit Results for {target_ip}:\n{scan_results}"
     except requests.exceptions.RequestException as e:
         return f"OpenClaw Nmap execution failed: {str(e)}"
+        # LOCAL FALLBACK: If OpenClaw is offline, use the local python-nmap library
+        try:
+            import nmap
+            nm = nmap.PortScanner()
+            nm.scan(target_ip, arguments=scan_type)
+            return f"[OpenClaw Offline - Used Local Fallback]\nNmap Audit Results for {target_ip}:\n{nm.csv()}"
+        except Exception as local_e:
+            return f"OpenClaw Nmap execution failed: {str(e)}\nLocal fallback also failed: {str(local_e)}"
 
 
 @tool
@@ -189,6 +210,19 @@ def generic_openclaw_scrape(url: str, instructions: str = "Extract the main cont
                     error_msg += "\n[A screenshot of the browser failure has been saved to data/scrape_error_screenshot.png]"
             except Exception:
                 pass
+
+        # LOCAL FALLBACK: If OpenClaw is offline, do a basic HTTP text scrape
+        try:
+            import re
+            fallback_res = requests.get(url, timeout=15)
+            fallback_res.raise_for_status()
+            # Strip HTML tags
+            clean_text = re.sub(r'<[^>]+>', ' ', fallback_res.text)
+            clean_text = " ".join(clean_text.split())  # Clean up whitespace
+            error_msg += f"\n\n[OpenClaw Offline - Used Local Fallback for basic text extraction]:\n{clean_text[:15000]}"
+        except Exception as fallback_e:
+            error_msg += f"\n[Local Fallback also failed]: {str(fallback_e)}"
+
         return error_msg
 
 
