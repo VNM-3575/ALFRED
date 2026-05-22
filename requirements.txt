@@ -2,6 +2,8 @@
 langgraph
 langchain-groq
 langchain-google-genai
+langchain-openai
+langchain-xai
 langchain-core
 streamlit
 python-dotenv
@@ -27,3 +29,7 @@ Pillow
 fpdf2
 pypdf
 matplotlib
+tableauserverclient
+opencv-python
+pyautogui
+numpy

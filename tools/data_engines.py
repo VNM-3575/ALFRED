@@ -4,8 +4,8 @@ import glob
 import duckdb
 from huggingface_hub import snapshot_download
 from langchain_core.tools import tool
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
+from config.llm_config import get_llm
 
 
 @tool
@@ -78,7 +78,7 @@ def summarize_large_dataset(query: str, chunk_size: int = 500, max_chunks: int =
         result = con.execute(query)
 
         # Using gemini-1.5-flash for map-reduce is faster and cheaper for bulk data tasks
-        llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.1)
+        llm = get_llm(temperature=0.1)
         chunk_summaries = []
 
         while True:

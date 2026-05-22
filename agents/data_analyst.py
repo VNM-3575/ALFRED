@@ -1,12 +1,12 @@
 from langchain_core.messages import SystemMessage
-from langchain_google_genai import ChatGoogleGenerativeAI
 from config.system_prompts import AGENT_DATA_ANALYST_PROMPT
+from config.llm_config import get_llm
 
 from tools.finance_tools import calculate_rsi, query_duckdb
 from tools.data_engines import download_hf_dataset, load_hf_dataset_to_duckdb, save_text_to_duckdb
 
 # 1. Initialize Model (Lower temperature for analytical precision)
-analyst_llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0.1)
+analyst_llm = get_llm(temperature=0.1)
 
 # 2. Bind Tools
 analyst_tools = [calculate_rsi, query_duckdb,

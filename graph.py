@@ -9,8 +9,7 @@ from langgraph.graph import StateGraph, END
 from langgraph.prebuilt import ToolNode
 from langchain_core.messages import BaseMessage, SystemMessage
 
-# 2. LLM Provider Import (Using your paid Gemini tier for the orchestrator)
-from langchain_google_genai import ChatGoogleGenerativeAI
+from config.llm_config import get_llm
 
 # 3. Local Agent Brain Imports
 from agents.afande import run_afande_agent
@@ -19,14 +18,15 @@ from agents.content_creator import run_content_creator_agent
 from agents.student import run_student_agent
 
 # 4. Local Tool Imports (Exposing the exclusive software capabilities)
-from tools.security_tools import download_portal_assignment, run_nmap_audit, get_allowed_account_credentials, generic_openclaw_scrape
-from tools.finance_tools import calculate_rsi, query_duckdb
+from tools.security_tools import download_portal_assignment, run_nmap_audit, get_allowed_account_credentials, generic_openclaw_scrape, draft_portal_submission, extract_grading_rubric
+from tools.finance_tools import calculate_rsi, query_duckdb, check_openai_balance
 from tools.data_engines import download_hf_dataset, load_hf_dataset_to_duckdb, summarize_large_dataset, save_text_to_duckdb
 from tools.creative_tools import generate_veo_video, generate_banana_art
-from tools.report_tools import generate_pdf_report, generate_chart, update_capabilities_file
+from tools.report_tools import generate_pdf_report, generate_chart, update_capabilities_file, publish_to_tableau
 from tools.system_tools import write_to_file, request_shell_execution
 from tools.audio_tools import transcribe_audio
 from tools.social_tools import post_to_social_media, make_web_request
+from tools.vision_tools import record_screen
 
 load_dotenv()
 
@@ -57,7 +57,7 @@ When new capabilities or tools are added to the system, instruct the CONTENT_CRE
 
 CRITICAL: You are the director. Speak directly to the user or call upon an agent by updating the active_agent tracking status. Do not try to perform specialized tasks yourself."""
 
-alfred_llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0.2)
+alfred_llm = get_llm(temperature=0.2)
 
 
 def alfred_director(state: AgentState):
@@ -79,13 +79,14 @@ def alfred_director(state: AgentState):
 # Group tools by agent to keep capabilities completely exclusive
 afande_tools = [download_portal_assignment,
                 run_nmap_audit, write_to_file, request_shell_execution,
-                post_to_social_media, make_web_request, generic_openclaw_scrape]
-data_analyst_tools = [calculate_rsi, query_duckdb,
+                post_to_social_media, make_web_request, generic_openclaw_scrape, record_screen]
+data_analyst_tools = [calculate_rsi, query_duckdb, check_openai_balance,
                       download_hf_dataset, load_hf_dataset_to_duckdb, save_text_to_duckdb]
 
 content_creator_tools = [generate_veo_video, generate_banana_art, generate_pdf_report, generate_chart,
-                         transcribe_audio, summarize_large_dataset, update_capabilities_file]
-student_tools = [get_allowed_account_credentials]
+                         transcribe_audio, summarize_large_dataset, update_capabilities_file, publish_to_tableau]
+student_tools = [get_allowed_account_credentials,
+                 draft_portal_submission, extract_grading_rubric]
 
 # Combine all tools into a single execution node for LangGraph to reference
 all_project_tools = afande_tools + data_analyst_tools + \

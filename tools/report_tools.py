@@ -2,6 +2,7 @@ import os
 import json
 import matplotlib.pyplot as plt
 from fpdf import FPDF
+import tableauserverclient as TSC
 from langchain_core.tools import tool
 
 
@@ -77,3 +78,51 @@ def update_capabilities_file(new_markdown_content: str) -> str:
         return "Successfully updated data/capabilities.md"
     except Exception as e:
         return f"Failed to update capabilities: {str(e)}"
+
+
+@tool
+def publish_to_tableau(project_name: str, file_path: str) -> str:
+    """
+    Publishes a data source or workbook (.tds, .tdsx, .twb, .twbx) to Tableau Server/Cloud.
+    Requires TABLEAU_SERVER, TABLEAU_TOKEN_NAME, TABLEAU_TOKEN_VALUE, and TABLEAU_SITE_ID environment variables.
+    """
+    try:
+        server_url = os.getenv("TABLEAU_SERVER")
+        token_name = os.getenv("TABLEAU_TOKEN_NAME")
+        token_value = os.getenv("TABLEAU_TOKEN_VALUE")
+        site_id = os.getenv("TABLEAU_SITE_ID", "")
+
+        if not all([server_url, token_name, token_value]):
+            return "Missing Tableau environment variables. Please configure TABLEAU_SERVER, TABLEAU_TOKEN_NAME, and TABLEAU_TOKEN_VALUE."
+
+        tableau_auth = TSC.PersonalAccessTokenAuth(
+            token_name, token_value, site_id=site_id)
+        server = TSC.Server(server_url, use_server_version=True)
+
+        with server.auth.sign_in(tableau_auth):
+            # Find project by name
+            req_option = TSC.RequestOptions()
+            req_option.filter.add(TSC.Filter(
+                TSC.RequestOptions.Field.Name, TSC.RequestOptions.Operator.Equals, project_name))
+            all_projects, _ = server.projects.get(req_option)
+
+            if not all_projects:
+                return f"Tableau project '{project_name}' not found."
+
+            project_id = all_projects[0].id
+
+            if file_path.endswith(('.twb', '.twbx')):
+                new_workbook = TSC.WorkbookItem(project_id)
+                new_workbook = server.workbooks.publish(
+                    new_workbook, file_path, 'Overwrite')
+                return f"Successfully published workbook '{new_workbook.name}' to Tableau."
+            elif file_path.endswith(('.tds', '.tdsx', '.hyper')):
+                new_datasource = TSC.DatasourceItem(project_id)
+                new_datasource = server.datasources.publish(
+                    new_datasource, file_path, 'Overwrite')
+                return f"Successfully published datasource '{new_datasource.name}' to Tableau."
+            else:
+                return "Unsupported file type. Tableau publishing requires .twb, .twbx, .tds, .tdsx, or .hyper."
+
+    except Exception as e:
+        return f"Failed to publish to Tableau: {str(e)}"

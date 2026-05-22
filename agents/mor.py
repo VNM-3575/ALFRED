@@ -1,6 +1,7 @@
 # IMPORT mor_system_prompt
 
 # agents/mor.py
+import os
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 from config.prompts import MOR_SYSTEM_PROMPT
@@ -8,7 +9,8 @@ from config.prompts import MOR_SYSTEM_PROMPT
 from tools.finance_tools import calculate_rsi, query_duckdb
 
 # 1. Initialize MOR's Model (Low temperature for mathematical precision)
-mor_llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0.1)
+gemini_model = os.getenv("GEMINI_MODEL_NAME", "gemini-1.5-pro")
+mor_llm = ChatGoogleGenerativeAI(model=gemini_model, temperature=0.1)
 
 # 2. Bind MOR's exclusive tools
 mor_tools = [calculate_rsi, query_duckdb]

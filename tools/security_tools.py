@@ -4,8 +4,8 @@ import json
 import requests
 import base64
 from langchain_core.tools import tool
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage
+from config.llm_config import get_llm
 
 
 @tool
@@ -125,11 +125,11 @@ def get_allowed_account_credentials(account_name: str) -> str:
 
 
 @tool
-def generic_openclaw_scrape(url: str, instructions: str = "Extract the main content of the page", wait_for_selector: str = None, run_sentiment_analysis: bool = False, session_id: str = None) -> str:
+def generic_openclaw_scrape(url: str, instructions: str = "Extract the main content of the page", wait_for_selector: str = None, wait_for_text: str = None, run_sentiment_analysis: bool = False, session_id: str = None) -> str:
     """
     Uses OpenClaw's Playwright engine to scrape a generic URL.
     Useful for sites that block standard requests but can be accessed via a headless browser.
-    You can optionally specify a CSS selector to wait for, and optionally run sentiment analysis on the result.
+    You can optionally specify a CSS selector or exact text to wait for (DOM resilience), and optionally run sentiment analysis.
     Use session_id if you want OpenClaw to inject previously saved authentication cookies.
     """
     openclaw_url = os.getenv(
@@ -150,6 +150,8 @@ def generic_openclaw_scrape(url: str, instructions: str = "Extract the main cont
 
     if wait_for_selector:
         payload["options"]["wait_for_selector"] = wait_for_selector
+    if wait_for_text:
+        payload["options"]["wait_for_text"] = wait_for_text
 
     if session_id:
         payload["options"]["use_saved_session"] = True
@@ -166,8 +168,7 @@ def generic_openclaw_scrape(url: str, instructions: str = "Extract the main cont
         result_str = f"Successfully scraped {url}:\n{scraped_content}"
 
         if run_sentiment_analysis:
-            llm = ChatGoogleGenerativeAI(
-                model="gemini-1.5-flash", temperature=0.1)
+            llm = get_llm(temperature=0.1)
             sentiment_prompt = f"Perform a detailed sentiment analysis on this scraped text. Identify the overall tone, emotional drivers, and key themes:\n\n{scraped_content[:15000]}"
             sentiment_response = llm.invoke(
                 [HumanMessage(content=sentiment_prompt)])
@@ -189,3 +190,93 @@ def generic_openclaw_scrape(url: str, instructions: str = "Extract the main cont
             except Exception:
                 pass
         return error_msg
+
+
+@tool
+def draft_portal_submission(target_url: str, submission_content: str, file_upload_path: str = None, target_elements: list = None, username: str = None, password: str = None, session_id: str = None) -> str:
+    """
+    Uses OpenClaw to navigate to a student portal and draft an assignment submission.
+    Can optionally upload a generated file (like a PDF report or dataset).
+    CRITICAL: This tool explicitly avoids clicking 'Submit' to enforce Human-in-the-Loop (HITL) safety.
+    """
+    openclaw_url = os.getenv(
+        "OPENCLAW_API_URL", "http://localhost:8000/api/automate")
+    username = username or os.getenv("STUDENT_PORTAL_USER")
+    password = password or os.getenv("STUDENT_PORTAL_PASS")
+
+    payload = {
+        "task_name": "student_assignment_completion_workflow",
+        "action": "browser_navigate_and_draft_submission",
+        "target_url": target_url,
+        "target_elements": target_elements or ["#assignment-submission-box", ".upload-button"],
+        "submission_data": {
+            "text_content": submission_content,
+            "file_upload_path": file_upload_path
+        },
+        "instructions": "Navigate to the assignment URL. Fill the text box with the submission data content. If a file_upload_path is provided, upload the file. DO NOT click the final submit button. Leave the draft on the screen for human review.",
+        "credentials": {"username": username, "password": password},
+        "options": {
+            "solve_captcha": bool(os.getenv("CAPTCHA_API_KEY")),
+            "captcha_api_key": os.getenv("CAPTCHA_API_KEY"),
+            "use_saved_session": True if session_id else False,
+            "session_id": session_id or "session_default",
+            "headless": False,  # Force UI to show for human review
+            "screenshot_on_error": True
+        }
+    }
+
+    try:
+        response = requests.post(openclaw_url, json=payload, timeout=120)
+        response.raise_for_status()
+        result_data = response.json()
+        status = result_data.get("output", "Draft completed.")
+        return f"Successfully drafted the submission at {target_url}. [HITL REQUIRED: Please check the OpenClaw browser window to manually confirm and click Submit.]\n\nDetails: {status}"
+    except requests.exceptions.RequestException as e:
+        return f"OpenClaw execution failed while drafting submission: {str(e)}"
+
+
+@tool
+def extract_grading_rubric(target_url: str, rubric_selectors: list = None, username: str = None, password: str = None, session_id: str = None) -> str:
+    """
+    Uses OpenClaw to log into the student portal, navigate to an assignment page, 
+    and precisely extract grading rubric criteria. If no selectors are provided, 
+    it automatically defaults to standard Canvas/Blackboard/Moodle rubric selectors.
+    """
+    openclaw_url = os.getenv(
+        "OPENCLAW_API_URL", "http://localhost:8000/api/automate")
+    username = username or os.getenv("STUDENT_PORTAL_USER")
+    password = password or os.getenv("STUDENT_PORTAL_PASS")
+
+    # Fallback to standard LMS selectors if none are provided by the LLM
+    if not rubric_selectors:
+        rubric_selectors = [
+            ".rubric", "#rubric", "[data-testid='rubric']",
+            "table.rubricTable", ".grading-criteria",
+            "#grading-rubric", "[aria-label*='rubric']"
+        ]
+
+    payload = {
+        "task_name": "extract_grading_rubric",
+        "action": "browser_navigate_and_extract",
+        "target_url": target_url,
+        "target_elements": rubric_selectors,
+        "instructions": "Navigate to the assignment URL. Extract the text content from the specified target_elements which contain the grading rubric.",
+        "credentials": {"username": username, "password": password},
+        "options": {
+            "solve_captcha": bool(os.getenv("CAPTCHA_API_KEY")),
+            "captcha_api_key": os.getenv("CAPTCHA_API_KEY"),
+            "use_saved_session": True if session_id else False,
+            "session_id": session_id or "session_default",
+            "headless": os.getenv("OPENCLAW_HEADLESS", "True").lower() == "true",
+            "screenshot_on_error": True
+        }
+    }
+
+    try:
+        response = requests.post(openclaw_url, json=payload, timeout=120)
+        response.raise_for_status()
+        result_data = response.json()
+        rubric_content = result_data.get("output", "No rubric content found.")
+        return f"Successfully extracted rubric from {target_url}:\n\n{rubric_content}"
+    except requests.exceptions.RequestException as e:
+        return f"OpenClaw execution failed while extracting rubric: {str(e)}"

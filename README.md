@@ -47,6 +47,7 @@ ALFRED can adopt different operational modes via the UI to tailor his workflows:
 - **Ngrok Auto-Tunneling:** Pre-configured Docker service exposes your backend securely for Hugging Face Spaces and remote access.
 - **Dynamic Task Scheduling:** Pause, edit, resume, and track scheduled cron jobs natively within Streamlit.
 - **Live Capabilities Dashboard:** Dynamically view and update ALFRED's capabilities catalog directly from the Streamlit UI.
+- **Local Inference Engine Support:** Seamlessly connect ALFRED to a local LLM (like Ollama or LM Studio) to save on API costs and maximize privacy.
 
 ---
 
@@ -99,6 +100,30 @@ ALFRED can adopt different operational modes via the UI to tailor his workflows:
 4. **Access the Application:**
    - **ALFRED Command Center:** http://localhost:8501
    - **Database Admin UI:** http://localhost:8080
+
+---
+
+## ☁️ Deploying to Hugging Face Spaces
+
+ALFRED is pre-configured with YAML frontmatter to be instantly deployed as a **Hugging Face Space**.
+
+1. Create a new Space on Hugging Face and choose the **Streamlit** SDK.
+2. Push this repository directly to your Space.
+3. Add your environment variables (like `OPENCLAW_API_URL` and `DATABASE_URL`) to your Space's **Secrets** settings. _Note: Use an ngrok URL to bridge the cloud Space back to your local machine!_
+
+## 🧠 Connecting a Local Inference Engine
+
+You can run ALFRED using entirely local, free, and private models (e.g., via **Ollama**, **LM Studio**, or **vLLM**) instead of Gemini.
+
+1. Start your local inference engine with an OpenAI-compatible server (e.g., LM Studio on port `1234`).
+2. Use ngrok to expose your local LLM to the internet (if ALFRED is hosted on Hugging Face): `ngrok http 1234`
+3. Update your `.env` (or Hugging Face Space Secrets) with the tunnel credentials:
+   ```env
+   LOCAL_INFERENCE_URL=https://your-ngrok-url.app/v1
+   LOCAL_MODEL_NAME=your-local-model-name
+   LOCAL_INFERENCE_KEY=not-needed
+   ```
+   ALFRED will automatically detect the `LOCAL_INFERENCE_URL` and reroute all AI processing to your local GPU!
 
 ---
 

@@ -1,3 +1,6 @@
+import os
+import requests
+from datetime import datetime, timedelta
 import duckdb
 import yfinance as yf
 import pandas_ta as ta
@@ -49,3 +52,40 @@ def calculate_rsi(ticker: str, period: int = 14) -> str:
         return f"The current {period}-day RSI for {ticker} is {latest_rsi:.2f}"
     except Exception as e:
         return f"Error calculating RSI: {str(e)}"
+
+
+@tool
+def check_openai_balance() -> str:
+    """
+    Checks the current OpenAI API usage and balance for the active API key.
+    Returns the hard limit and the total usage for the current calendar month.
+    """
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        return "Error: OPENAI_API_KEY environment variable is missing."
+
+    headers = {"Authorization": f"Bearer {api_key}"}
+    base_url = "https://api.openai.com/v1/dashboard/billing"
+
+    try:
+        # Calculate start and end dates for the current calendar month
+        now = datetime.now()
+        start_date = now.replace(day=1).strftime("%Y-%m-%d")
+        end_date = (now + timedelta(days=1)).strftime("%Y-%m-%d")
+
+        # Fetch subscription limit
+        sub_res = requests.get(
+            f"{base_url}/subscription", headers=headers, timeout=10)
+        sub_res.raise_for_status()
+        hard_limit = sub_res.json().get("hard_limit_usd", 0.0)
+
+        # Fetch monthly usage
+        usage_res = requests.get(
+            f"{base_url}/usage?start_date={start_date}&end_date={end_date}", headers=headers, timeout=10)
+        usage_res.raise_for_status()
+        total_usage = usage_res.json().get("total_usage", 0.0) / \
+            100.0  # API returns usage in cents
+
+        return f"OpenAI API Balance:\n- Usage this month: ${total_usage:.2f}\n- Hard Limit: ${hard_limit:.2f}"
+    except requests.exceptions.RequestException as e:
+        return f"Failed to fetch OpenAI balance. Note: OpenAI frequently restricts billing endpoints for standard API keys (403 Forbidden). Error: {str(e)}"

@@ -6,6 +6,7 @@ import psycopg2
 from huggingface_hub import HfApi
 from langchain_core.messages import HumanMessage, AIMessage
 from graph import alfred_app
+import dotenv
 from PIL import ImageGrab
 import base64
 from io import BytesIO
@@ -130,6 +131,55 @@ with st.sidebar:
                         "Invalid CSV format. Missing required Chrome columns (name, username, password).")
             except Exception as e:
                 st.error(f"Error parsing CSV: {e}")
+
+    st.markdown("---")
+    st.subheader("🔑 API & Environment Config")
+    with st.expander("Manage Keys & Links"):
+        st.caption(
+            "Update API keys and endpoint URLs. Changes are saved to your .env file.")
+
+        env_path = ".env"
+        # Read existing env vars from file to populate defaults
+        existing_env = dotenv.dotenv_values(
+            env_path) if os.path.exists(env_path) else {}
+
+        # Common keys used by ALFRED tools
+        common_keys = [
+            "GOOGLE_API_KEY", "OPENAI_API_KEY", "GROQ_API_KEY", "XAI_API_KEY",
+            "HUGGINGFACE_API_KEY", "OPENCLAW_API_URL", "DATABASE_URL",
+            "LOCAL_INFERENCE_URL", "LOCAL_MODEL_NAME"
+        ]
+
+        with st.form("env_config_form"):
+            updated_vars = {}
+            for key in common_keys:
+                val = existing_env.get(key, os.environ.get(key, ""))
+                # Mask sensitive fields visually, but leave URLs as standard text
+                input_type = "password" if "KEY" in key or "PASS" in key or "TOKEN" in key else "default"
+                updated_vars[key] = st.text_input(
+                    key, value=val, type=input_type)
+
+            st.markdown("**Custom / New Variables**")
+            st.caption("Add configuration for new tools added later.")
+            custom_key = st.text_input(
+                "New Variable Name (e.g., NEW_TOOL_API_KEY)")
+            custom_val = st.text_input("New Variable Value", type="password")
+
+            submit_env = st.form_submit_button("Save Configuration")
+            if submit_env:
+                if not os.path.exists(env_path):
+                    open(env_path, 'a').close()
+                for k, v in updated_vars.items():
+                    if v.strip() != "":
+                        dotenv.set_key(env_path, k, v.strip())
+                        # Instantly apply to active running memory
+                        os.environ[k] = v.strip()
+                if custom_key.strip() and custom_val.strip():
+                    dotenv.set_key(
+                        env_path, custom_key.strip().upper(), custom_val.strip())
+                    os.environ[custom_key.strip().upper()] = custom_val.strip()
+                st.success("Environment configuration saved!")
+                st.rerun()
 
     st.markdown("---")
     st.subheader("⏱️ Task Scheduler")

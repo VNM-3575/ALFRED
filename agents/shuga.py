@@ -1,6 +1,7 @@
 # Imports SHUGA_SYSTEM_PROMPTS
 
 # agents/shuga.py
+import os
 from langchain_core.messages import SystemMessage, HumanMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 from config.prompts import SHUGA_SYSTEM_PROMPT
@@ -8,7 +9,8 @@ from config.prompts import SHUGA_SYSTEM_PROMPT
 from tools.creative_tools import generate_veo_video, generate_banana_art
 
 # 1. Initialize SHUGA's Model (Higher temperature for creative variance)
-shuga_llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0.7)
+gemini_model = os.getenv("GEMINI_MODEL_NAME", "gemini-1.5-pro")
+shuga_llm = ChatGoogleGenerativeAI(model=gemini_model, temperature=0.7)
 
 # 2. Bind SHUGA's exclusive tools
 shuga_tools = [generate_veo_video, generate_banana_art]

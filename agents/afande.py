@@ -2,13 +2,13 @@
 
 # agents/afande.py
 from langchain_core.messages import SystemMessage, HumanMessage
-from langchain_google_genai import ChatGoogleGenerativeAI
 from config.prompts import AFANDE_SYSTEM_PROMPT  # Import from your config file
+from config.llm_config import get_llm
 
 
 def run_afande_agent(user_task: str):
-    # 1. Initialize the LLM
-    llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro", temperature=0.1)
+    # 1. Initialize the LLM dynamically
+    llm = get_llm(temperature=0.1)
 
     # 2. Format the message array explicitly separating System Identity from User Request
     messages = [
