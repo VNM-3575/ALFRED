@@ -25,8 +25,10 @@ from tools.creative_tools import generate_veo_video, generate_banana_art
 from tools.report_tools import generate_pdf_report, generate_chart, update_capabilities_file, publish_to_tableau
 from tools.system_tools import write_to_file, request_shell_execution
 from tools.audio_tools import transcribe_audio
-from tools.social_tools import post_to_social_media, make_web_request
+from tools.social_tools import post_to_social_media, make_web_request, send_text_message
 from tools.vision_tools import record_screen
+from tools.doctor_tools import run_pipeline_diagnostics, apply_pipeline_fix
+from tools.email_tools import read_incoming_emails, send_email
 
 load_dotenv()
 
@@ -79,7 +81,8 @@ def alfred_director(state: AgentState):
 # Group tools by agent to keep capabilities completely exclusive
 afande_tools = [download_portal_assignment,
                 run_nmap_audit, write_to_file, request_shell_execution,
-                post_to_social_media, make_web_request, generic_openclaw_scrape, record_screen]
+                post_to_social_media, make_web_request, generic_openclaw_scrape, record_screen,
+                run_pipeline_diagnostics, apply_pipeline_fix, read_incoming_emails]
 data_analyst_tools = [calculate_rsi, query_duckdb, check_openai_balance,
                       download_hf_dataset, load_hf_dataset_to_duckdb, save_text_to_duckdb]
 

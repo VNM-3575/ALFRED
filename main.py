@@ -147,7 +147,10 @@ with st.sidebar:
         common_keys = [
             "GOOGLE_API_KEY", "OPENAI_API_KEY", "GROQ_API_KEY", "XAI_API_KEY",
             "HUGGINGFACE_API_KEY", "OPENCLAW_API_URL", "DATABASE_URL",
-            "LOCAL_INFERENCE_URL", "LOCAL_MODEL_NAME"
+            "LOCAL_INFERENCE_URL", "LOCAL_MODEL_NAME",
+            "SMTP_SERVER", "SMTP_PORT", "SMTP_USERNAME", "SMTP_PASSWORD", "NOTIFICATION_EMAIL",
+            "IMAP_SERVER", "IMAP_PORT",
+            "TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_PHONE_NUMBER"
         ]
 
         with st.form("env_config_form"):
@@ -196,7 +199,8 @@ with st.sidebar:
             "Check student portal for new assignments",
             "Scrape TechCrunch and save sentiment analysis to DuckDB",
             "Generate daily RSI chart for AAPL and summarize",
-            "Run a quick Nmap audit on 127.0.0.1"
+            "Run a quick Nmap audit on 127.0.0.1",
+            "Ask AFANDE to read my emails. If the subject contains 'Invoice', reply confirming receipt."
         ]
         selected_task = st.selectbox("Select a task template:", task_options)
 
@@ -307,6 +311,31 @@ with st.sidebar:
         st.code("docker-compose logs -f alfred_core", language="bash")
         st.code("docker-compose logs -f db", language="bash")
         st.code("docker-compose logs -f openclaw", language="bash")
+
+    with st.expander("Pipeline Health Reports"):
+        reports_dir = os.path.join("data", "health_reports")
+        if os.path.exists(reports_dir):
+            report_files = sorted([f for f in os.listdir(
+                reports_dir) if f.endswith('.txt')], reverse=True)
+            if not report_files:
+                st.info("No health reports generated yet.")
+            else:
+                selected_report = st.selectbox(
+                    "Select a report to view:", report_files)
+                if selected_report:
+                    with open(os.path.join(reports_dir, selected_report), "r", encoding="utf-8") as f:
+                        st.text(f.read())
+                    with open(os.path.join(reports_dir, selected_report), "rb") as f:
+                        st.download_button(
+                            label="⬇️ Download Report",
+                            data=f,
+                            file_name=selected_report,
+                            mime="text/plain",
+                            key=f"dl_{selected_report}"
+                        )
+        else:
+            st.info(
+                "No health reports directory found. Run the DOCTOR tool or wait for the daily check to generate one.")
 
     st.markdown("---")
     st.subheader("📂 Generated Reports")

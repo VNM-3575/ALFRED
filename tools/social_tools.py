@@ -38,3 +38,40 @@ def make_web_request(url: str, method: str = "GET", payload: dict = None) -> str
         return f"Web request to {url} succeeded. Response preview:\n{res.text[:800]}"
     except Exception as e:
         return f"Web request failed: {str(e)}"
+
+
+@tool
+def send_text_message(to_number: str, message: str, use_whatsapp: bool = False) -> str:
+    """
+    Sends an SMS or WhatsApp message using Twilio.
+    Requires TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER environment variables.
+    Format phone numbers with country code (e.g., +1234567890).
+    """
+    account_sid = os.getenv("TWILIO_ACCOUNT_SID")
+    auth_token = os.getenv("TWILIO_AUTH_TOKEN")
+    from_number = os.getenv("TWILIO_PHONE_NUMBER")
+
+    if not all([account_sid, auth_token, from_number]):
+        return "Error: Twilio credentials are not fully configured in the environment."
+
+    url = f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}/Messages.json"
+
+    if use_whatsapp:
+        if not to_number.startswith("whatsapp:"):
+            to_number = f"whatsapp:{to_number}"
+        if not from_number.startswith("whatsapp:"):
+            from_number = f"whatsapp:{from_number}"
+
+    payload = {
+        "To": to_number,
+        "From": from_number,
+        "Body": message
+    }
+
+    try:
+        response = requests.post(url, data=payload, auth=(
+            account_sid, auth_token), timeout=10)
+        response.raise_for_status()
+        return f"Successfully sent {'WhatsApp' if use_whatsapp else 'SMS'} message to {to_number}."
+    except Exception as e:
+        return f"Failed to send message: {str(e)}"

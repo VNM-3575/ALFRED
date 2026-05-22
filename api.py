@@ -11,6 +11,8 @@ from typing import List, Any
 from graph import alfred_app
 from langchain_core.messages import HumanMessage, AIMessage
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from datetime import datetime
+from tools.doctor_tools import run_pipeline_diagnostics
 
 # Define the request body model for type safety
 
@@ -106,10 +108,32 @@ def run_scheduled_task():
         send_email_notification("ALFRED Scheduled Task Failed", f"Error:\n{e}")
 
 
+def daily_health_check():
+    """Automatically runs the DOCTOR tool directly and logs the report to a file."""
+    print("Executing daily pipeline health check...")
+    try:
+        report = run_pipeline_diagnostics.invoke({})
+        log_dir = os.path.join("data", "health_reports")
+        os.makedirs(log_dir, exist_ok=True)
+
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        log_path = os.path.join(log_dir, f"report_{timestamp}.txt")
+
+        with open(log_path, "w", encoding="utf-8") as f:
+            f.write(report)
+
+        print(f"Health check complete. Log saved to {log_path}")
+        send_email_notification(
+            "ALFRED Daily Health Report", f"Saved to {log_path}\n\n{report}")
+    except Exception as e:
+        print(f"Daily health check failed: {e}")
+
+
 @app.on_event("startup")
 async def start_scheduler():
-    # We start the scheduler empty so jobs can be added dynamically via the UI
-    # You can safely leave your hardcoded jobs here if you prefer
+    # Schedule the health check to run every day at 08:00 AM
+    scheduler.add_job(daily_health_check, 'cron', hour=8, minute=0,
+                      id='daily_health_check', name='Daily System Health Check', replace_existing=True)
     scheduler.start()
 
 
