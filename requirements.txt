@@ -33,3 +33,5 @@ tableauserverclient
 opencv-python
 pyautogui
 numpy
+altair
+pandas
