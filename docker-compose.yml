@@ -75,32 +75,19 @@ services:
       - db
     command: uvicorn api:app --host 0.0.0.0 --port 8000 --reload
 
-  # The Frontend: Marimo UI replacing Streamlit
-  alfred_ui:
-    build: .
-    container_name: alfred_ui
-    volumes:
-      - .:/app
-    environment:
-      - ALFRED_API_URL=http://alfred_agents:8000/chat
-    ports:
-      - "8501:8501"
-    depends_on:
-      - alfred_agents
-    command: marimo run marimo_app.py --host 0.0.0.0 -p 8501
+  # The Frontend: Marimo UI replacing Streamlitalfred_ui:
 
-  # Ngrok tunnel to expose ALFRED API to the internet (for Hugging Face Spaces / remote access)
-  ngrok:
-    image: ngrok/ngrok:latest
-    container_name: alfred_ngrok
-    restart: unless-stopped
-    environment:
-      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
-    command: "http alfred_agents:8000"
-    ports:
-      - "4040:4040" # Dashboard accessible locally at localhost:4040
-    depends_on:
-      - alfred_agents
+ngrok:
+  image: ngrok/ngrok:latest
+  container_name: alfred_ngrok
+  restart: unless-stopped
+  environment:
+    - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+  command: "http alfred_agents:8000"
+  ports:
+    - "4040:4040" # Dashboard accessible locally at localhost:4040
+  depends_on:
+    - alfred_agents
 
 volumes:
   postgres_data:
