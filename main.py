@@ -4,10 +4,7 @@ import streamlit as st
 import requests
 import psycopg2
 from huggingface_hub import HfApi
-from langchain_core.messages import HumanMessage, AIMessage
-from graph import alfred_app
 import dotenv
-from PIL import ImageGrab
 import base64
 from io import BytesIO
 try:
@@ -26,43 +23,9 @@ if "edit_task_prompt" not in st.session_state:
 with st.sidebar:
     st.title("⚙️ Control Panel")
 
-    # Persona Swapping
-    selected_persona = st.selectbox(
-        "Active Persona",
-        ["ALFRED (Core Director)", "Student", "Content Creator",
-         "Business Analyst", "Data Scientist", "Ethical Hacker"]
-    )
-
-    # OpenClaw Debugging Toggle
     headless_mode = st.toggle("OpenClaw Headless Mode", value=True,
                               help="Turn off to visually see the browser UI during web tasks.")
     os.environ["OPENCLAW_HEADLESS"] = str(headless_mode)
-
-    st.markdown("---")
-    if st.button("Clear Chat History"):
-        st.session_state.messages = []
-        st.rerun()
-
-    st.markdown("---")
-    st.subheader("👁️ ALFRED Vision")
-    st.caption("Takes a snapshot of your local screen.")
-    if st.button("Look at my screen"):
-        # Capture screen and convert to base64
-        screenshot = ImageGrab.grab()
-        buffered = BytesIO()
-        screenshot.save(buffered, format="JPEG", quality=80)
-        img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
-
-        # Append multimodal message payload
-        st.session_state.messages.append({
-            "role": "user",
-            "content": [
-                {"type": "text", "text": "This is a screenshot of my current screen. Please analyze it based on my next prompt or tell me what you see."},
-                {"type": "image_url", "image_url": {
-                    "url": f"data:image/jpeg;base64,{img_str}"}}
-            ]
-        })
-        st.rerun()
 
     st.markdown("---")
     st.subheader("🔐 Credential Manager")

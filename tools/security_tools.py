@@ -314,3 +314,18 @@ def extract_grading_rubric(target_url: str, rubric_selectors: list = None, usern
         return f"Successfully extracted rubric from {target_url}:\n\n{rubric_content}"
     except requests.exceptions.RequestException as e:
         return f"OpenClaw execution failed while extracting rubric: {str(e)}"
+        error_msg = f"OpenClaw execution failed while extracting rubric: {str(e)}"
+
+        # LOCAL FALLBACK: If OpenClaw is offline, try a direct HTTP text scrape
+        try:
+            import re
+            fallback_res = requests.get(target_url, auth=(
+                username, password) if username and password else None, timeout=15)
+            fallback_res.raise_for_status()
+            clean_text = re.sub(r'<[^>]+>', ' ', fallback_res.text)
+            clean_text = " ".join(clean_text.split())
+            error_msg += f"\n\n[OpenClaw Offline - Used Local Fallback for basic text extraction]:\n{clean_text[:15000]}"
+        except Exception as fallback_e:
+            error_msg += f"\n[Local Fallback also failed]: {str(fallback_e)}"
+
+        return error_msg

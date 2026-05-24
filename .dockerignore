@@ -1,0 +1,15 @@
+# Ignore Git repository
+.git
+.gitignore
+
+# Ignore local environments, keys, and caches
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+
+# Ignore generated data, databases, and heavy files
+data/
+allowed-access-accounts/
+postgres_data/
+*.duckdb

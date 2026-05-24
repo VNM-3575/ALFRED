@@ -13,8 +13,8 @@ def generate_pdf_report(content: str, filename: str = "report.pdf") -> str:
     Useful for converting data summaries and creative writing into a final downloadable PDF.
     """
     try:
-        os.makedirs("data", exist_ok=True)
         filepath = os.path.join("data", filename)
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
 
         pdf = FPDF()
         pdf.add_page()

@@ -14,7 +14,7 @@ huggingface_hub
 
 # Data & Finance
 yfinance
-pandas-ta
+ta
 duckdb
 psycopg2-binary
 

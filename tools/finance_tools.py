@@ -3,7 +3,7 @@ import requests
 from datetime import datetime, timedelta
 import duckdb
 import yfinance as yf
-import pandas_ta as ta
+import ta
 import pandas as pd
 from langchain_core.tools import tool
 
@@ -46,9 +46,10 @@ def calculate_rsi(ticker: str, period: int = 14) -> str:
         if data.empty:
             return f"Could not fetch data for ticker {ticker}."
 
-        # Calculate RSI using pandas-ta and grab the latest value
-        data.ta.rsi(length=period, append=True)
-        latest_rsi = data[f"RSI_{period}"].iloc[-1]
+        # Calculate RSI using the 'ta' library and grab the latest value
+        rsi_series = ta.momentum.RSIIndicator(
+            data['Close'], window=period).rsi()
+        latest_rsi = rsi_series.iloc[-1]
         return f"The current {period}-day RSI for {ticker} is {latest_rsi:.2f}"
     except Exception as e:
         return f"Error calculating RSI: {str(e)}"

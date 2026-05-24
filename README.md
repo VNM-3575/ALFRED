@@ -133,6 +133,7 @@ You can run ALFRED using entirely local, free, and private models (e.g., via **O
 ALFRED/
 ├── agents/                 # Logic for sub-agents (AFANDE, MOR, SHUGA)
 ├── config/                 # Configuration files (system_prompts.py)
+├── scripts/                # Master workflows, logics, and automated SOPs
 ├── tools/                  # Extensible capabilities (finance, security, creative)
 ├── data/                   # Local staging area for downloads and DuckDB
 ├── graph.py                # Core LangGraph orchestration and routing logic
