@@ -35,7 +35,10 @@ def __():
         return response.json().get("content", "Error reaching ALFRED.")
 
     chat = mo.ui.chat(alfred_responder, prompts=[
-                      "What are my pending assignments?", "Run a system health check."])
+        "What are my pending assignments?",
+        "Run a system health check.",
+        "Ask the DATA_ANALYST to query the pdf_summaries table in DuckDB."
+    ])
     return alfred_responder, chat, mo, os, persona_dropdown, requests
 
 

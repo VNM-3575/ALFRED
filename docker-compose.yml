@@ -2,13 +2,23 @@ services:
   # The Brain: Where MOR's data and ALFRED's memory live
   db:
     image: postgres:15-alpine
-    container_name: alfred_db
+    container_name: alfred_postgres_db
+    restart: always
     environment:
-      POSTGRES_USER: alfred_admin
-      POSTGRES_PASSWORD: alfred_password
-      POSTGRES_DB: alfred_warehouse
+      POSTGRES_USER: ${POSTGRES_USER:-alfred_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-alfred_password}
+      POSTGRES_DB: ${POSTGRES_DB:-alfred_warehouse}
     ports:
       - "5432:5432"
+    # This command generates a self-signed dev certificate and fires up Postgres with SSL enabled
+    command: >
+      sh -c "apk add --no-cache openssl
+             && ssl_dir='/var/lib/postgresql/data/ssl'
+             && mkdir -p $$ssl_dir
+             && openssl req -new -x509 -days 365 -nodes -text -out $$ssl_dir/server.crt -keyout $$ssl_dir/server.key -subj '/CN=localhost'
+             && chmod 600 $$ssl_dir/server.key
+             && chown postgres:postgres $$ssl_dir/server.key $$ssl_dir/server.crt
+             && docker-entrypoint.sh postgres -c ssl=on -c ssl_cert_file=$$ssl_dir/server.crt -c ssl_key_file=$$ssl_dir/server.key"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -27,7 +37,7 @@ services:
     volumes:
       - .:/app
     environment:
-      - DATABASE_URL=postgresql://alfred_admin:alfred_password@db:5432/alfred_warehouse
+      - DATABASE_URL=postgresql://alfred_admin:alfred_password@db:5432/alfred_warehouse?sslmode=require
       - GROQ_API_KEY=${GROQ_API_KEY}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}

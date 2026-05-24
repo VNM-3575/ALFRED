@@ -3,15 +3,14 @@ title: ALFRED Meta-Agent
 emoji: 🎩
 colorFrom: blue
 colorTo: purple
-sdk: streamlit
-sdk_version: 1.32.0
-app_file: main.py
+sdk: docker
+app_port: 8501
 pinned: false
 ---
 
 # 🎩 ALFRED: Meta-Agent Orchestrator
 
-**ALFRED** (Advanced Logical Functional Retrieval & Execution Director) is a multi-agent orchestrator built with **LangGraph**, **Streamlit**, and **Docker**. It uses a specialized director-worker architecture to delegate complex tasks across specialized AI personas, interacting seamlessly with databases, web portals, security tools, and financial APIs.
+**ALFRED** (Advanced Logical Functional Retrieval & Execution Director) is a multi-agent orchestrator built with **LangGraph**, **Marimo**, and **Docker**. It uses a specialized director-worker architecture to delegate complex tasks across specialized AI personas, interacting seamlessly with databases, web portals, security tools, and financial APIs.
 
 ---
 
@@ -40,13 +39,13 @@ ALFRED can adopt different operational modes via the UI to tailor his workflows:
 ## 🚀 Features
 
 - **LangGraph State Routing:** Complex conditional edge routing ensuring tasks stay within their designated agent boundaries.
-- **Interactive Streamlit UI:** A responsive chat interface with a dedicated sidebar for persona swapping.
+- **Interactive Marimo UI:** A responsive chat and notebook interface with a dedicated sidebar for persona swapping.
 - **Multimodal Vision:** ALFRED can take snapshots of your local screen and analyze them via multimodal payloads.
 - **Containerized Infrastructure:** Seamless deployment using Docker Compose, integrating a local PostgreSQL warehouse (`alfred_warehouse`) and Adminer UI.
 - **Headless Browser Delegation:** Web tasks are routed through the isolated **OpenClaw API** for safe, containerized web execution.
 - **Ngrok Auto-Tunneling:** Pre-configured Docker service exposes your backend securely for Hugging Face Spaces and remote access.
-- **Dynamic Task Scheduling:** Pause, edit, resume, and track scheduled cron jobs natively within Streamlit.
-- **Live Capabilities Dashboard:** Dynamically view and update ALFRED's capabilities catalog directly from the Streamlit UI.
+- **Dynamic Task Scheduling:** Pause, edit, resume, and track scheduled cron jobs natively within Marimo.
+- **Live Capabilities Dashboard:** Dynamically view and update ALFRED's capabilities catalog directly from the UI.
 - **Local Inference Engine Support:** Seamlessly connect ALFRED to a local LLM (like Ollama or LM Studio) to save on API costs and maximize privacy.
 
 ---
@@ -105,9 +104,9 @@ ALFRED can adopt different operational modes via the UI to tailor his workflows:
 
 ## ☁️ Deploying to Hugging Face Spaces
 
-ALFRED is pre-configured with YAML frontmatter to be instantly deployed as a **Hugging Face Space**.
+ALFRED is pre-configured with YAML frontmatter to be instantly deployed as a Docker-based **Hugging Face Space**.
 
-1. Create a new Space on Hugging Face and choose the **Streamlit** SDK.
+1. Create a new Space on Hugging Face and choose the **Docker** SDK.
 2. Push this repository directly to your Space.
 3. Add your environment variables (like `OPENCLAW_API_URL` and `DATABASE_URL`) to your Space's **Secrets** settings. _Note: Use an ngrok URL to bridge the cloud Space back to your local machine!_
 
@@ -137,7 +136,7 @@ ALFRED/
 ├── tools/                  # Extensible capabilities (finance, security, creative)
 ├── data/                   # Local staging area for downloads and DuckDB
 ├── graph.py                # Core LangGraph orchestration and routing logic
-├── main.py                 # Streamlit graphical interface
+├── marimo_app.py           # Marimo notebook and graphical interface
 ├── docker-compose.yml      # Container orchestration
 ├── Dockerfile              # Container definition for ALFRED Core
 └── requirements.txt        # Python dependencies

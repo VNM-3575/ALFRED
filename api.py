@@ -14,6 +14,7 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from datetime import datetime
 from tools.doctor_tools import run_pipeline_diagnostics
 from tools.social_tools import send_text_message
+from pdf_summarizer import summarize_pdfs_to_duckdb
 
 # Define the request body model for type safety
 
@@ -151,11 +152,26 @@ def daily_health_check():
                 pass
 
 
+def daily_pdf_summarizer():
+    """Automatically runs the PDF summarizer workflow every night."""
+    print("Executing nightly PDF summarizer workflow...")
+    try:
+        summarize_pdfs_to_duckdb()
+        print("Nightly PDF summarizer workflow complete.")
+    except Exception as e:
+        print(f"Nightly PDF summarizer workflow failed: {e}")
+        send_email_notification(
+            "ALFRED Nightly Task Failed", f"Error in PDF summarizer:\n{e}")
+
+
 @app.on_event("startup")
 async def start_scheduler():
     # Schedule the health check to run every day at 08:00 AM
     scheduler.add_job(daily_health_check, 'cron', hour=8, minute=0,
                       id='daily_health_check', name='Daily System Health Check', replace_existing=True)
+    # Schedule the PDF summarizer to run every night at 02:00 AM
+    scheduler.add_job(daily_pdf_summarizer, 'cron', hour=2, minute=0,
+                      id='daily_pdf_summarizer', name='Nightly PDF Summarization', replace_existing=True)
     scheduler.start()
 
 
