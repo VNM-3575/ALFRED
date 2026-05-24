@@ -1,93 +1,59 @@
+version: "3.8"
+
 services:
-  # The Brain: Where MOR's data and ALFRED's memory live
-  db:
+  # --- Transactional Database Service ---
+  postgres:
     image: postgres:15-alpine
     container_name: alfred_postgres_db
     restart: always
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-alfred_admin}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-alfred_password}
-      POSTGRES_DB: ${POSTGRES_DB:-alfred_warehouse}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5432:5432"
-    # This command generates a self-signed dev certificate and fires up Postgres with SSL enabled
-    command: >
-      sh -c "apk add --no-cache openssl
-             && ssl_dir='/var/lib/postgresql/data/ssl'
-             && mkdir -p $$ssl_dir
-             && openssl req -new -x509 -days 365 -nodes -text -out $$ssl_dir/server.crt -keyout $$ssl_dir/server.key -subj '/CN=localhost'
-             && chmod 600 $$ssl_dir/server.key
-             && chown postgres:postgres $$ssl_dir/server.key $$ssl_dir/server.crt
-             && docker-entrypoint.sh postgres -c ssl=on -c ssl_cert_file=$$ssl_dir/server.crt -c ssl_key_file=$$ssl_dir/server.key"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - alfred_postgres_data:/var/lib/postgresql/data
 
-  # Database UI: To visualize what SHUGA&SPICE and MOR are doing
-  adminer:
-    image: adminer
-    container_name: alfred_ui_db
-    restart: always
-    ports:
-      - "8080:8080"
-
-  # The Agents: This is where your LangGraph code lives
+  # --- Multi-Agent Core Orchestrator ---
   alfred_agents:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: alfred_core
+    restart: always
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+    ports:
+      - "8000:8000"
+
+  # --- Reactive Marimo User Interface Portal ---
+  alfred_ui:
+    build: .
+    container_name: alfred_ui
+    restart: always
     volumes:
       - .:/app
     environment:
-      - DATABASE_URL=postgresql://alfred_admin:alfred_password@db:5432/alfred_warehouse?sslmode=require
-      - GROQ_API_KEY=${GROQ_API_KEY}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-      - GEMINI_MODEL_NAME=${GEMINI_MODEL_NAME}
-      - XAI_API_KEY=${XAI_API_KEY}
-      - OPENCLAW_API_URL=${OPENCLAW_API_URL}
-      - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY}
-      - CAPTCHA_API_KEY=${CAPTCHA_API_KEY}
-      - LOCAL_INFERENCE_URL=${LOCAL_INFERENCE_URL}
-      - LOCAL_INFERENCE_KEY=${LOCAL_INFERENCE_KEY}
-      - LOCAL_MODEL_NAME=${LOCAL_MODEL_NAME}
-      - SMTP_SERVER=${SMTP_SERVER}
-      - SMTP_PORT=${SMTP_PORT}
-      - SMTP_USERNAME=${SMTP_USERNAME}
-      - SMTP_PASSWORD=${SMTP_PASSWORD}
-      - NOTIFICATION_EMAIL=${NOTIFICATION_EMAIL}
-      - IMAP_SERVER=${IMAP_SERVER}
-      - IMAP_PORT=${IMAP_PORT}
-      - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
-      - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
-      - TWILIO_PHONE_NUMBER=${TWILIO_PHONE_NUMBER}
-      - ADMIN_PHONE_NUMBER=${ADMIN_PHONE_NUMBER}
+      - ALFRED_API_URL=http://alfred_agents:8000/chat
     ports:
-      - "8000:8000" # Expose the FastAPI port
-    develop:
-      watch:
-        - action: sync
-          path: .
-          target: /app
-        - action: rebuild
-          path: requirements.txt
-        - action: rebuild
-          path: Dockerfile
+      - "8501:8501"
     depends_on:
-      - db
-    command: uvicorn api:app --host 0.0.0.0 --port 8000 --reload
+      - alfred_agents
+    command: python -m marimo run marimo_app.py --host 0.0.0.0 -p 8501
 
-  # The Frontend: Marimo UI replacing Streamlitalfred_ui:
+  # --- Secure External Access Proxy ---
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: alfred_ngrok
+    restart: always
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+    command: http alfred_ui:8501
+    depends_on:
+      - alfred_ui
 
-ngrok:
-  image: ngrok/ngrok:latest
-  container_name: alfred_ngrok
-  restart: unless-stopped
-  environment:
-    - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
-  command: "http alfred_agents:8000"
-  ports:
-    - "4040:4040" # Dashboard accessible locally at localhost:4040
-  depends_on:
-    - alfred_agents
-
+# --- Dedicated Storage Persistence Volume Frame ---
 volumes:
-  postgres_data:
+  alfred_postgres_data:
+    driver: local
