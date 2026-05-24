@@ -33,4 +33,4 @@ EXPOSE 8501
 
 # The 'command' is usually handled by docker-compose, 
 # but we can set a default here just in case.
-CMD ["streamlit", "run", "main.py"]
+CMD ["marimo", "run", "marimo_app.py", "--host", "0.0.0.0", "-p", "8501"]

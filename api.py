@@ -13,6 +13,7 @@ from langchain_core.messages import HumanMessage, AIMessage
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from datetime import datetime
 from tools.doctor_tools import run_pipeline_diagnostics
+from tools.social_tools import send_text_message
 
 # Define the request body model for type safety
 
@@ -125,8 +126,29 @@ def daily_health_check():
         print(f"Health check complete. Log saved to {log_path}")
         send_email_notification(
             "ALFRED Daily Health Report", f"Saved to {log_path}\n\n{report}")
+
+        if "⚠️ Issues Detected" in report or "❌" in report:
+            admin_phone = os.getenv("ADMIN_PHONE_NUMBER")
+            if admin_phone:
+                try:
+                    send_text_message.invoke({
+                        "to_number": admin_phone,
+                        "message": "ALFRED Alert 🚨\nDaily health check detected issues! Check your logs."
+                    })
+                    print("Sent failure SMS alert to Admin.")
+                except Exception as sms_err:
+                    print(f"Failed to send SMS alert: {sms_err}")
     except Exception as e:
         print(f"Daily health check failed: {e}")
+        admin_phone = os.getenv("ADMIN_PHONE_NUMBER")
+        if admin_phone:
+            try:
+                send_text_message.invoke({
+                    "to_number": admin_phone,
+                    "message": f"ALFRED Critical Alert 🚨\nThe daily health check crashed entirely: {str(e)[:100]}"
+                })
+            except:
+                pass
 
 
 @app.on_event("startup")
@@ -265,3 +287,43 @@ async def whatsapp_webhook(
 </Response>"""
 
     return Response(content=twiml_response, media_type="application/xml")
+
+
+@app.post("/sms")
+async def sms_webhook(
+    Body: str = Form(...),
+    From: str = Form(...)
+):
+    """Receives incoming SMS messages from Twilio and returns ALFRED's response."""
+    inputs = {"messages": [HumanMessage(content=Body)]}
+    config = {"configurable": {"thread_id": f"sms_{From}"}}
+
+    response = alfred_app.invoke(inputs, config)
+    final_msg = response["messages"][-1].content
+
+    twiml_response = f"""<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Message>{final_msg}</Message>
+</Response>"""
+
+    return Response(content=twiml_response, media_type="application/xml")
+
+
+class OpenClawWebhookPayload(BaseModel):
+    event: str
+    data: Any
+
+
+@app.post("/webhook/openclaw")
+async def openclaw_webhook(payload: OpenClawWebhookPayload):
+    """Receives automated webhook triggers directly from OpenClaw."""
+    prompt = f"[Automated OpenClaw Trigger]\nEvent: {payload.event}\nData: {payload.data}\n\nPlease analyze this event and execute the corresponding workflow."
+
+    inputs = {"messages": [HumanMessage(content=prompt)]}
+    config = {"configurable": {"thread_id": "openclaw_auto_trigger"}}
+
+    try:
+        response = alfred_app.invoke(inputs, config)
+        return {"status": "success", "response": response["messages"][-1].content}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}

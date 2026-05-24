@@ -14,12 +14,18 @@ def get_llm(temperature=0.2):
         )
     else:
         from langchain_google_genai import ChatGoogleGenerativeAI
-        gemini_model = os.getenv("GEMINI_MODEL_NAME", "gemini-1.5-pro")
+        gemini_model = os.getenv("GEMINI_MODEL_NAME", "gemini-2.5-pro")
         primary_llm = ChatGoogleGenerativeAI(
             model=gemini_model, temperature=temperature)
 
     # Configure fallback models to prevent rate limits or token depletion mid-task
     fallbacks = []
+
+    if os.getenv("GOOGLE_API_KEY"):
+        from langchain_google_genai import ChatGoogleGenerativeAI
+        fallbacks.append(ChatGoogleGenerativeAI(
+            model="gemini-1.5-pro", temperature=temperature))
+
     if os.getenv("OPENAI_API_KEY"):
         from langchain_openai import ChatOpenAI
         fallbacks.append(ChatOpenAI(

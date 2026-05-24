@@ -1,0 +1,22 @@
+{
+  "version": "1",
+  "metadata": {
+    "marimo_version": "0.23.8",
+    "script_metadata_hash": null
+  },
+  "cells": [
+    {
+      "id": "Hbol",
+      "code_hash": "2b457bbf313d5ce353bf99a5d4c0e259",
+      "outputs": [
+        {
+          "type": "error",
+          "ename": "sql-error",
+          "evalue": "Invalid Input Error: Initialization function \"motherduck_duckdb_cpp_init\" from file \"C:\\Users\\Admin\\.duckdb\\extensions\\v1.5.3\\windows_amd64\\motherduck.duckdb_extension\" threw an exception: \"\nYour DuckDB version (v1.5.3) is not yet supported by MotherDuck. The latest supported version is v1.5.2. Please downgrade to use MotherDuck.\n\nSee https://motherduck.com/docs/getting-started/connect-query-from-duckdb-cli for more information.\"",
+          "traceback": []
+        }
+      ],
+      "console": []
+    }
+  ]
+}

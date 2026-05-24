@@ -49,6 +49,7 @@ services:
       - TWILIO_ACCOUNT_SID=${TWILIO_ACCOUNT_SID}
       - TWILIO_AUTH_TOKEN=${TWILIO_AUTH_TOKEN}
       - TWILIO_PHONE_NUMBER=${TWILIO_PHONE_NUMBER}
+      - ADMIN_PHONE_NUMBER=${ADMIN_PHONE_NUMBER}
     ports:
       - "8000:8000" # Expose the FastAPI port
     develop:
@@ -63,6 +64,20 @@ services:
     depends_on:
       - db
     command: uvicorn api:app --host 0.0.0.0 --port 8000 --reload
+
+  # The Frontend: Marimo UI replacing Streamlit
+  alfred_ui:
+    build: .
+    container_name: alfred_ui
+    volumes:
+      - .:/app
+    environment:
+      - ALFRED_API_URL=http://alfred_agents:8000/chat
+    ports:
+      - "8501:8501"
+    depends_on:
+      - alfred_agents
+    command: marimo run marimo_app.py --host 0.0.0.0 -p 8501
 
   # Ngrok tunnel to expose ALFRED API to the internet (for Hugging Face Spaces / remote access)
   ngrok:

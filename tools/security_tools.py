@@ -294,7 +294,7 @@ def extract_grading_rubric(target_url: str, rubric_selectors: list = None, usern
         "action": "browser_navigate_and_extract",
         "target_url": target_url,
         "target_elements": rubric_selectors,
-        "instructions": "Navigate to the assignment URL. Extract the text content from the specified target_elements which contain the grading rubric.",
+        "instructions": "Navigate to the assignment URL. Extract the text content from the specified target_elements which contain the grading rubric. Format the extracted rubric as clean structured Markdown, ensuring all grading criteria, descriptions, and point values are explicitly paired and easy for an AI to parse.",
         "credentials": {"username": username, "password": password},
         "options": {
             "solve_captcha": bool(os.getenv("CAPTCHA_API_KEY")),
