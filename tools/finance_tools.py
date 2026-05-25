@@ -3,6 +3,7 @@ import requests
 from datetime import datetime, timedelta
 import duckdb
 import yfinance as yf
+import psycopg2
 import ta
 import pandas as pd
 from langchain_core.tools import tool
@@ -33,6 +34,35 @@ def query_duckdb(query: str) -> str:
         return df.to_string()
     except Exception as e:
         return f"Error executing DuckDB query: {str(e)}"
+
+
+@tool
+def query_postgresql(query: str) -> str:
+    """
+    Executes a SQL query against the PostgreSQL data warehouse and returns the results.
+    Useful for querying system logs, active tasks, and other relational data.
+    """
+    db_url = os.getenv("DATABASE_URL")
+    if not db_url:
+        return "Error: DATABASE_URL environment variable is missing."
+
+    try:
+        with psycopg2.connect(db_url) as conn:
+            with conn.cursor() as cur:
+                cur.execute(query)
+                if cur.description is None:
+                    return "Query executed successfully (no rows returned)."
+
+                columns = [desc[0] for desc in cur.description]
+                # Limit to 100 rows to prevent context window overflow
+                rows = cur.fetchmany(100)
+                if not rows:
+                    return "Query executed successfully, but no data was returned."
+
+                df = pd.DataFrame(rows, columns=columns)
+                return df.to_string()
+    except Exception as e:
+        return f"Error executing PostgreSQL query: {str(e)}"
 
 
 @tool

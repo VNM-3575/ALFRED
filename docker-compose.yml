@@ -1,59 +1,69 @@
-version: "3.8"
-
 services:
-  # --- Transactional Database Service ---
-  postgres:
-    image: postgres:15-alpine
+  # The Brain: Where MOR's data and ALFRED's memory live
+  db:
+    build:
+      context: .
+      dockerfile: Dockerfile.postgres
     container_name: alfred_postgres_db
     restart: always
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER:-alfred_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-alfred_password}
+      POSTGRES_DB: ${POSTGRES_DB:-alfred_warehouse}
     ports:
       - "5432:5432"
     volumes:
-      - alfred_postgres_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
 
-  # --- Multi-Agent Core Orchestrator ---
-  alfred_agents:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: alfred_core
+  # Database UI: Adminer visualizer
+  adminer:
+    image: adminer
+    container_name: alfred_ui_db
     restart: always
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+
+  # The Agents: This is where your LangGraph code lives
+  alfred_agents:
+    build: .
+    container_name: alfred_core
+    volumes:
+      - .:/app
+    env_file: .env
     environment:
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      # Sync the URL parameter string to match your local Docker network routing details
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-alfred_admin}:${POSTGRES_PASSWORD:-alfred_password}@db:5432/${POSTGRES_DB:-alfred_warehouse}?sslmode=require
     ports:
       - "8000:8000"
+    depends_on:
+      - db
+    command: uvicorn api:app --host 0.0.0.0 --port 8000 --reload
 
-  # --- Reactive Marimo User Interface Portal ---
   alfred_ui:
     build: .
     container_name: alfred_ui
-    restart: always
     volumes:
       - .:/app
+    env_file: .env
     environment:
       - ALFRED_API_URL=http://alfred_agents:8000/chat
     ports:
       - "8501:8501"
     depends_on:
       - alfred_agents
-    command: python -m marimo run marimo_app.py --host 0.0.0.0 -p 8501
+    command: marimo run marimo_app.py --host 0.0.0.0 -p 8501
 
-  # --- Secure External Access Proxy ---
-  ngrok:
-    image: ngrok/ngrok:latest
-    container_name: alfred_ngrok
+  openclaw:
+    image: openclaw:latest # <-- Update this if you use a specific image name or a local build path (like build: ../OpenClaw)
+    container_name: openclaw
     restart: always
+    ports:
+      - "8001:8000" # Mapped to 8001 on your host to prevent conflict with ALFRED
     environment:
-      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
-    command: http alfred_ui:8501
-    depends_on:
-      - alfred_ui
+      - HEADLESS=True
 
-# --- Dedicated Storage Persistence Volume Frame ---
 volumes:
-  alfred_postgres_data:
-    driver: local
+  postgres_data:

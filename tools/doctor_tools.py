@@ -113,3 +113,26 @@ def apply_pipeline_fix(issue_id: str) -> str:
         return "⚠️ DOCTOR-FIX: Cannot auto-start OpenClaw remotely. Please verify your ngrok tunnel is active or your OpenClaw container is running."
 
     return f"❌ DOCTOR-FIX: Unknown or unfixable Issue ID '{issue_id}'."
+
+
+@tool
+def log_system_event(log_level: str, message: str) -> str:
+    """
+    Logs a system event or agent action to the PostgreSQL system_logs table.
+    Use this to record important actions, completed tasks, errors, or milestones.
+    log_level MUST be one of: 'INFO', 'WARNING', or 'ERROR'.
+    """
+    db_url = os.getenv("DATABASE_URL")
+    if not db_url:
+        return "❌ Failed to log event: DATABASE_URL environment variable is missing."
+
+    try:
+        with psycopg2.connect(db_url) as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    "INSERT INTO system_logs (log_level, message) VALUES (%s, %s)",
+                    (log_level.upper(), message)
+                )
+        return f"Successfully logged {log_level} event to system_logs."
+    except Exception as e:
+        return f"Failed to log event to PostgreSQL: {str(e)}"

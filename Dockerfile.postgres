@@ -1,0 +1,13 @@
+FROM postgres:15-alpine
+
+# Install OpenSSL
+RUN apk add --no-cache openssl
+
+# Create the SSL directory, generate self-signed certificates, and set permissions
+RUN mkdir -p /var/lib/postgresql/ssl \
+    && openssl req -new -x509 -days 365 -nodes -text -out /var/lib/postgresql/ssl/server.crt -keyout /var/lib/postgresql/ssl/server.key -subj '/CN=localhost' \
+    && chmod 600 /var/lib/postgresql/ssl/server.key \
+    && chown postgres:postgres /var/lib/postgresql/ssl/server.key /var/lib/postgresql/ssl/server.crt
+
+# Start PostgreSQL with SSL enabled pointing to the generated certificates
+CMD ["postgres", "-c", "ssl=on", "-c", "ssl_cert_file=/var/lib/postgresql/ssl/server.crt", "-c", "ssl_key_file=/var/lib/postgresql/ssl/server.key"]

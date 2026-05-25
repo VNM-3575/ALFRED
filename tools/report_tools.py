@@ -1,5 +1,6 @@
 import os
 import json
+import datetime
 import matplotlib.pyplot as plt
 from fpdf import FPDF
 import tableauserverclient as TSC
@@ -7,10 +8,10 @@ from langchain_core.tools import tool
 
 
 @tool
-def generate_pdf_report(content: str, filename: str = "report.pdf") -> str:
+def generate_pdf_report(content: str, filename: str = "report.pdf", image_path: str = None) -> str:
     """
     Generates a PDF report from the provided text content and saves it to the data/ directory.
-    Useful for converting data summaries and creative writing into a final downloadable PDF.
+    Optionally, you can provide an image_path (like a path to a generated chart .png) to embed it into the PDF.
     """
     try:
         filepath = os.path.join("data", filename)
@@ -24,6 +25,12 @@ def generate_pdf_report(content: str, filename: str = "report.pdf") -> str:
         safe_content = content.encode('latin-1', 'ignore').decode('latin-1')
 
         pdf.multi_cell(0, 10, text=safe_content)
+
+        if image_path and os.path.exists(image_path):
+            pdf.ln(10)  # Add a line break
+            # Set width to 170mm to fit cleanly on A4 pages
+            pdf.image(image_path, w=170)
+
         pdf.output(filepath)
         return f"Successfully generated PDF report and saved to {filepath}"
     except Exception as e:
@@ -126,3 +133,35 @@ def publish_to_tableau(project_name: str, file_path: str) -> str:
 
     except Exception as e:
         return f"Failed to publish to Tableau: {str(e)}"
+
+
+@tool
+def append_to_perception_log(entry: str) -> str:
+    """
+    Appends a new entry to the data/workflow_perceptions.md file.
+    Use this to log ALFRED's understanding, sentiment, or feelings about the user's workflows, assignments, or emails.
+    """
+    try:
+        os.makedirs("data", exist_ok=True)
+        with open("data/workflow_perceptions.md", "a", encoding="utf-8") as f:
+            timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            f.write(f"\n### [{timestamp}]\n{entry}\n")
+        return "Successfully appended perception to workflow_perceptions.md"
+    except Exception as e:
+        return f"Failed to append to perception log: {str(e)}"
+
+
+@tool
+def read_perception_log() -> str:
+    """
+    Reads the entirety of the data/workflow_perceptions.md file.
+    Use this to recall past sentiments and how ALFRED perceives certain workflows or assignments.
+    """
+    try:
+        with open("data/workflow_perceptions.md", "r", encoding="utf-8") as f:
+            content = f.read()
+        return content if content else "The perception log is currently empty."
+    except FileNotFoundError:
+        return "The perception log does not exist yet."
+    except Exception as e:
+        return f"Failed to read perception log: {str(e)}"

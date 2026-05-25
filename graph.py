@@ -19,15 +19,15 @@ from agents.student import run_student_agent
 
 # 4. Local Tool Imports (Exposing the exclusive software capabilities)
 from tools.security_tools import download_portal_assignment, run_nmap_audit, get_allowed_account_credentials, generic_openclaw_scrape, draft_portal_submission, extract_grading_rubric
-from tools.finance_tools import calculate_rsi, query_duckdb, check_openai_balance
+from tools.finance_tools import calculate_rsi, query_duckdb, check_openai_balance, query_postgresql
 from tools.data_engines import download_hf_dataset, load_hf_dataset_to_duckdb, summarize_large_dataset, save_text_to_duckdb
 from tools.creative_tools import generate_veo_video, generate_banana_art
-from tools.report_tools import generate_pdf_report, generate_chart, update_capabilities_file, publish_to_tableau
+from tools.report_tools import generate_pdf_report, generate_chart, update_capabilities_file, publish_to_tableau, append_to_perception_log, read_perception_log
 from tools.system_tools import write_to_file, request_shell_execution
 from tools.audio_tools import transcribe_audio
 from tools.social_tools import post_to_social_media, make_web_request, send_text_message
 from tools.vision_tools import record_screen
-from tools.doctor_tools import run_pipeline_diagnostics, apply_pipeline_fix
+from tools.doctor_tools import run_pipeline_diagnostics, apply_pipeline_fix, log_system_event
 from tools.email_tools import read_incoming_emails, send_email
 
 load_dotenv()
@@ -82,14 +82,14 @@ def alfred_director(state: AgentState):
 afande_tools = [download_portal_assignment,
                 run_nmap_audit, write_to_file, request_shell_execution,
                 post_to_social_media, make_web_request, generic_openclaw_scrape, record_screen,
-                run_pipeline_diagnostics, apply_pipeline_fix, read_incoming_emails]
-data_analyst_tools = [calculate_rsi, query_duckdb, check_openai_balance,
+                run_pipeline_diagnostics, apply_pipeline_fix, read_incoming_emails, log_system_event]
+data_analyst_tools = [calculate_rsi, query_duckdb, check_openai_balance, log_system_event, query_postgresql, append_to_perception_log, read_perception_log,
                       download_hf_dataset, load_hf_dataset_to_duckdb, save_text_to_duckdb]
 
 content_creator_tools = [generate_veo_video, generate_banana_art, generate_pdf_report, generate_chart,
-                         transcribe_audio, summarize_large_dataset, update_capabilities_file, publish_to_tableau]
+                         transcribe_audio, summarize_large_dataset, update_capabilities_file, publish_to_tableau, log_system_event]
 student_tools = [get_allowed_account_credentials,
-                 draft_portal_submission, extract_grading_rubric]
+                 draft_portal_submission, extract_grading_rubric, log_system_event]
 
 # Combine all tools into a single execution node for LangGraph to reference
 all_project_tools = afande_tools + data_analyst_tools + \
